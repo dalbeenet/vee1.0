@@ -1,0 +1,26 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="vee">
+      <UniqueIdentifier>{cb2c0b93-d607-4d22-a2e1-bd48d6f738d6}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\vee\vee.h">
+      <Filter>vee</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vee\flag.h">
+      <Filter>vee</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vee\macro.h">
+      <Filter>vee</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vee\lock.h">
+      <Filter>vee</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vee\delegate.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="main.cpp" />
+  </ItemGroup>
+</Project>
