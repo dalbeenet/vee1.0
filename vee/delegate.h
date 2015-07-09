@@ -1,6 +1,8 @@
 #ifndef _VEE_DELEGATE_H_
 #define _VEE_DELEGATE_H_
 
+#include <cassert>
+#include <map>
 #include <vector>
 #include <functional>
 #include <vee/macro.h>
@@ -8,9 +10,9 @@
 _VEE_BEGIN
 
 template <class T>
-void* addr_cast(T pointer)
+void* pvoid_cast(T pointer)
 {
-    auto ptr = pointer;
+    auto& ptr = pointer;
     void* addr = *(void**)(&ptr);
     return addr;
 }
@@ -23,26 +25,13 @@ bool compare_functions(const _Function& lhs, const _Function& rhs)
         std::is_function<FuncSig>::value,
         typename std::add_pointer<FuncSig>::type,
         FuncSig
-        > ::type funcptr_type;
-    if (const funcptr_type* lhs_internal = lhs.template target<funcptr_type>())
+        > ::type target_type;
+    if (const target_type* lhs_internal = lhs.template target<target_type>())
     {
-        if (const funcptr_type* rhs_internal = rhs.template target<funcptr_type>())
+        if (const target_type* rhs_internal = rhs.template target<target_type>())
             return *rhs_internal == *lhs_internal;
     }
     return false;
-}
-
-template <typename FuncSig, typename _Function>
-int unique_key(_Function& f)
-{
-    typedef typename std::conditional
-        <
-        std::is_function<FuncSig>::value,
-        typename std::add_pointer<FuncSig>::type,
-        FuncSig
-        > ::type funcptr_type;
-    const funcptr_type* internal = f.template target<funcptr_type>();
-    return (int)internal;
 }
 
 template <typename FTy>
@@ -64,19 +53,13 @@ public:
         _type_holder = compare_functions < Func, _function_t > ;
         return *this;
     }
-    friend bool operator==(const _function_t &lhs, const compareable_function &rhs)
+    friend bool operator==(const _function_t& lhs, const compareable_function& rhs)
     {
         return rhs._type_holder(lhs, rhs);
     }
     friend bool operator==(const compareable_function &lhs, const _function_t &rhs)
     {
         return rhs == lhs;
-    }
-    // ...
-    friend void swap(compareable_function &lhs, compareable_function &rhs)// noexcept
-    {
-        lhs.swap(rhs);
-        lhs._type_holder.swap(rhs._type_holder);
     }
 };
 
@@ -93,10 +76,12 @@ public:
     typedef type& reference_t;
     typedef type&& rreference_t;
     typedef RTy(*funcptr_t)(Args ...);
-    typedef RTy(func_t)(Args ...);
+    typedef __int64 key_t;
 private:
-    typedef std::function< func_t > _binder_t;
-    typedef std::vector<std::pair<int, _binder_t>> _container_t;
+    typedef std::function< RTy(Args ...) > _binder_t;
+    typedef compareable_function< RTy(Args ...) > _compareable_binder_t;
+    typedef std::vector< _binder_t > _container_t;
+    typedef std::map<key_t, _binder_t> _indexing_container_t;
 public:
     // ctor
     delegate() = default;
@@ -116,50 +101,53 @@ public:
     {
         for (auto& it : _container)
         {
+            it.operator()(std::forward<decltype(args)>(args)...);
+        }
+        for (auto& it : _idx_container)
+        {
             it.second.operator()(std::forward<decltype(args)>(args)...);
         }
     }
-    void operator+=(_binder_t func)
+    template <class CallableObj>
+    void operator+=(CallableObj func)
     {
-        printf("%s\nkey: %d\n", __FUNCTION__, unique_key<func_t, _binder_t>(func));
-        _container.push_back(std::make_pair(unique_key<func_t, _binder_t>(func), func));
-    }
-    void operator-=(_binder_t func)
-    {
-        int key = unique_key<func_t, _binder_t>(func);
-        printf("%s\nkey: %d\n", __FUNCTION__, key);
-        for (auto& it : _container)
-        {
-            if (it.first == key)
-            {
-                _container.erase(it);
-                break;
-            }
-        }
-    }
-    /*template <class CallableObj>
-    void operator+=(CallableObj& func)
-    {
-    printf("%s\nkey: %d\n", __FUNCTION__, unique_key(func));
-    _binder_t binder(func);
-    _container.push_back(std::make_pair(unique_key(func), binder));
-    puts("Success to push function!");
+        _binder_t binder(func);
+        _container.push_back(std::move(binder));
     }
     template <class CallableObj>
-    void operator-=(CallableObj& func)
+    void operator+=(std::pair<key_t, CallableObj> key_func_pair)
     {
-    printf("%s\nkey: %d\n", __FUNCTION__, unique_key(func));
-    int key = unique_key(func);
-    for (auto& it : _container)
-    {
-    if (it.first == key)
-    {
-    _container.erase(it);
-    puts("Success to erase function!");
-    break;
+        _binder_t binder(key_func_pair.second);
+        _idx_container.insert(std::make_pair(key_func_pair.first, binder));
     }
+    template <class CallableObj>
+    bool operator-=(CallableObj func)
+    {
+        _binder_t binder(func);
+        for (auto iter = _container.begin(); iter != _container.end(); ++iter)
+        {
+            if (compare_functions<CallableObj>(*iter, binder))
+            {
+                _container.erase(iter);
+                return true;
+            }
+        }
+        printf("REMOVE FAILURE (function not found)\n");
+        return false;
     }
-    }*/
+    bool operator-=(const key_t key)
+    {
+        for (auto iter = _idx_container.begin(); iter != _idx_container.end(); ++iter)
+        {
+            if (iter->first == key)
+            {
+                _idx_container.erase(iter);
+                return true;
+            }
+        }
+        printf("REMOVE FAILURE (key not found)\n");
+        return false;
+    }
 private:
     void _deep_copy(reference_t _left)
     {
@@ -171,6 +159,7 @@ private:
     }
 private:
     _container_t _container;
+    _indexing_container_t _idx_container;
 };
 
 _VEE_END
