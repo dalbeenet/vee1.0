@@ -1,6 +1,15 @@
+/******************************************************************* 
+FileName: delegate.h
+Author  : vee
+Date    : 2015-07-10 01:01:22
+Desc    : c++ delegate class
+
+*******************************************************************/ 
+
 #ifndef _VEE_DELEGATE_H_
 #define _VEE_DELEGATE_H_
 
+#include <inttypes.h>
 #include <cassert>
 #include <map>
 #include <vector>
@@ -76,7 +85,7 @@ public:
     typedef type& reference_t;
     typedef type&& rreference_t;
     typedef RTy(*funcptr_t)(Args ...);
-    typedef __int64 key_t;
+    typedef int64_t key_t;a
 private:
     typedef std::function< RTy(Args ...) > _binder_t;
     typedef compareable_function< RTy(Args ...) > _compareable_binder_t;

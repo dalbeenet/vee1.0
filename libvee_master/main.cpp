@@ -91,7 +91,7 @@ int main()
                    std::placeholders::_2); // placehoder for arg2
     
     HR;
-    printf("CALL\n");
+    printf("CALL_TEST\n");
     e(1, 1); // call
     
     HR;
@@ -102,6 +102,6 @@ int main()
     e -= (__int64)1;
 
     HR;
-    printf("CALL\n");
+    printf("CALL_TEST\n");
     e(1, 1); // call
 }
