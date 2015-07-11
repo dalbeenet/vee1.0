@@ -11,10 +11,12 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\vee\actor.h" />
     <ClInclude Include="..\vee\delegate.h" />
     <ClInclude Include="..\vee\flag.h" />
     <ClInclude Include="..\vee\macro.h" />
     <ClInclude Include="..\vee\lock.h" />
+    <ClInclude Include="..\vee\signal_channel.h" />
     <ClInclude Include="..\vee\vee.h" />
   </ItemGroup>
   <ItemGroup>

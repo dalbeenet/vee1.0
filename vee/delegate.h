@@ -85,7 +85,7 @@ public:
     typedef type& reference_t;
     typedef type&& rreference_t;
     typedef RTy(*funcptr_t)(Args ...);
-    typedef int64_t key_t;a
+    typedef int64_t key_t;
 private:
     typedef std::function< RTy(Args ...) > _binder_t;
     typedef compareable_function< RTy(Args ...) > _compareable_binder_t;

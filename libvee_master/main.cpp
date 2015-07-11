@@ -1,107 +1,47 @@
-#include <vee/delegate.h>
+#include <vee/actor.h>
+#include <conio.h>
+#define HR for(int i = 0; i < 80; ++i) printf("_")
 
-int __cdecl case_cdecl(int a, int b)
-{
-    printf("CALL \t %s\n", __FUNCTION__);
-    return a + b;
-}
+vee::alram_channel signal;
 
-int __stdcall case_stdcall(int a, int b)
+int receiver()
 {
-    printf("CALL \t %s\n", __FUNCTION__);
+    signal.recv();
+    printf("signal received!!\n");
     return 0;
 }
 
-struct case_functor
+int sender()
 {
-    int i;
-    case_functor(int arg)
+    do
     {
-        i = arg;
+        printf("try send a signal\n");
     }
-    int operator()(int, int)
-    {
-        printf("CALL \t %s [i:%d]\n", __FUNCTION__, i);
-        return 0;
-    }
-    friend bool operator==(const case_functor& lhs,  const case_functor& rhs)
-    {
-        return lhs.i == rhs.i;
-    }
-};
+    while (!signal.try_send());
+    return 0;
+}
 
-struct case_functor2
+int sum(int a, int b)
 {
-    int i;
-    int j;
-    case_functor2(int arg)
-    {
-        i = arg;
-    }
-    int operator()(int, int)
-    {
-        printf("CALL \t %s [i:%d]\n", __FUNCTION__, i);
-        return 0;
-    }
-    friend bool operator==(const case_functor2& lhs, const case_functor2& rhs)
-    {
-        return lhs.i == rhs.i;
-    }
-};
+    printf("%d + %d = %d\n", a, b, a + b);
+    return a + b;
+}
 
-class case_bind_requirement
-{
-    int i;
-public:
-    case_bind_requirement(int a)
-    {
-        i = a;
-    }
-    int func(int bindit, int, int)
-    {
-        printf("CALL \t %s [bindit: %d, i: %d]\n", __FUNCTION__, bindit, i);
-        return 0;
-    }
-    friend bool operator==(const case_bind_requirement& lhs, const case_bind_requirement& rhs)
-    {
-        return lhs.i == rhs.i;
-    }
-};
-
-#define HR puts("______________________________________________")
 int main()
 {
     HR;
-    printf("INSERT\n");
-    _VEE delegate<int(int, int)> e;
-    e += case_stdcall;
-    e += case_cdecl;
-    e += case_functor(200);
-    e += std::make_pair((__int64)1, case_functor2(100));
-    case_bind_requirement bind_test(999);
-    e += std::bind(&case_bind_requirement::func, // function addr
-                   &bind_test, // binding this pointer
-                   1,
-                   std::placeholders::_1, // placeholder for arg1 
-                   std::placeholders::_2); // placehoder for arg2
-    e += std::bind(&case_bind_requirement::func, // function addr
-                   &bind_test, // binding this pointer
-                   2,
-                   std::placeholders::_1, // placeholder for arg1 
-                   std::placeholders::_2); // placehoder for arg2
-    
+    printf("SIGNAL TEST\n");
+    std::thread t1(sender);
+    std::thread t2(receiver);
+    t1.join();
+    t2.join();
     HR;
-    printf("CALL_TEST\n");
-    e(1, 1); // call
-    
-    HR;
-    printf("REMOVE\n");
-    e -= case_stdcall;
-    e -= case_cdecl;
-    e -= case_functor(200);
-    e -= (__int64)1;
-
-    HR;
-    printf("CALL_TEST\n");
-    e(1, 1); // call
+    vee::actor<int(int, int)> actor;
+    vee::delegate<int(int, int)> e;
+    e += sum;
+    actor.request(e, 1, 2);
+    actor.request(std::move(e), 1, 2);
+    actor.request(&e, 1, 2);
+    getch();
+    return 0;
 }
