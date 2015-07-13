@@ -21,6 +21,10 @@
     <ClInclude Include="..\vee\delegate.h" />
     <ClInclude Include="..\vee\actor.h" />
     <ClInclude Include="..\vee\signal_channel.h" />
+    <ClInclude Include="..\vee\tuple_unpacker.h">
+      <Filter>vee</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vee\type_parser.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />

@@ -15,6 +15,7 @@ Desc    : c++ delegate class
 #include <vector>
 #include <functional>
 #include <vee/macro.h>
+#include <vee/tuple_unpacker.h>
 
 _VEE_BEGIN
 
@@ -50,16 +51,16 @@ class compareable_function: std::function < FTy >
     bool(*_type_holder)(const _function_t&, const _function_t&);
 public:
     compareable_function() = default;
-    template <typename Func> compareable_function(Func f):
+    template <typename CallableObj> compareable_function(CallableObj f):
         _function_t(f),
-        _type_holder(compare_functions<Func, _function_t>)
+        _type_holder(compare_functions<CallableObj, _function_t>)
     {
         // empty
     }
-    template <typename Func> compareable_function& operator=(Func f)
+    template <typename CallableObj> compareable_function& operator=(CallableObj f)
     {
         _function_t::operator =(f);
-        _type_holder = compare_functions < Func, _function_t > ;
+        _type_holder = compare_functions < CallableObj, _function_t > ;
         return *this;
     }
     friend bool operator==(const _function_t& lhs, const compareable_function& rhs)
@@ -86,6 +87,8 @@ public:
     typedef type&& rreference_t;
     typedef RTy(*funcptr_t)(Args ...);
     typedef int64_t key_t;
+    typedef std::tuple<Args ...> argstuple_t;
+    static const int number_of_args = std::tuple_size < argstuple_t >::value ;
 private:
     typedef std::function< RTy(Args ...) > _binder_t;
     typedef compareable_function< RTy(Args ...) > _compareable_binder_t;
@@ -106,15 +109,28 @@ public:
     {
         this->_deep_copy(_right);
     }
-    void operator()(Args&& ...args)
+    template <typename ...FwdArgs>
+    void operator()(FwdArgs&& ...args)
     {
         for (auto& it : _container)
         {
-            it.operator()(std::forward<decltype(args)>(args)...);
+            it.operator()(args...);
         }
         for (auto& it : _idx_container)
         {
-            it.second.operator()(std::forward<decltype(args)>(args)...);
+            it.second.operator()(args...);
+        }
+    }
+    template <class ArgsTuple>
+    void operator()(ArgsTuple&& args)
+    {
+        for (auto& it : _container)
+        {
+            call_by_tuple(it, args);
+        }
+        for (auto& it : _idx_container)
+        {
+            call_by_tuple(it.second, args);
         }
     }
     template <class CallableObj>
@@ -136,6 +152,19 @@ public:
         for (auto iter = _container.begin(); iter != _container.end(); ++iter)
         {
             if (compare_functions<CallableObj>(*iter, binder))
+            {
+                _container.erase(iter);
+                return true;
+            }
+        }
+        printf("REMOVE FAILURE (function not found)\n");
+        return false;
+    }
+    bool operator-=(_binder_t binder)
+    {
+        for (auto iter = _container.begin(); iter != _container.end(); ++iter)
+        {
+            if (compare_functions<RTy(Args ...)>(*iter, binder))
             {
                 _container.erase(iter);
                 return true;

@@ -34,18 +34,18 @@ public:
         {
             throw std::runtime_error("This signal object is already on waiting state!");
         }
-        while (!_compare_and_swap(_state, IDLE, WAIT));
+        while (!_compare_and_swap_weak(_state, IDLE, WAIT));
         std::promise<T> receiver;
         std::future<T> future = receiver.get_future();
         _receiver_ptr = &receiver;
         T result = future.get();
         _receiver_ptr = nullptr;
-        while (!_compare_and_swap(_state, SIG, IDLE));
+        while (!_compare_and_swap_weak(_state, SIG, IDLE));
         return result;
     }
     bool try_send(T value)
     {
-        if (!_compare_and_swap(_state, WAIT, SIG))
+        if (!_compare_and_swap_weak(_state, WAIT, SIG))
         {
             return false;
         }
@@ -54,9 +54,9 @@ public:
         return true;
     }
 protected:
-    inline bool _compare_and_swap(std::atomic<int>& dst, int exp, int value)
+    inline bool _compare_and_swap_weak(std::atomic<int>& dst, int exp, int value)
     {
-        return dst.compare_exchange_strong(exp, value);
+        return dst.compare_exchange_weak(exp, value);
     }
 
 protected:
@@ -92,17 +92,17 @@ public:
         {
             throw std::runtime_error("This signal object is already on waiting state!");
         }
-        while (!_compare_and_swap(_state, IDLE, WAIT));
+        while (!_compare_and_swap_weak(_state, IDLE, WAIT));
         std::promise<int> receiver;
         std::future<int> future = receiver.get_future();
         _receiver_ptr = &receiver;
         auto result = future.get();
         _receiver_ptr = nullptr;
-        while (!_compare_and_swap(_state, SIG, IDLE));
+        while (!_compare_and_swap_weak(_state, SIG, IDLE));
     }
     bool try_send()
     {
-        if (!_compare_and_swap(_state, WAIT, SIG))
+        if (!_compare_and_swap_weak(_state, WAIT, SIG))
         {
             return false;
         }
@@ -111,7 +111,7 @@ public:
         return true;
     }
 protected:
-    inline bool _compare_and_swap(std::atomic<int>& dst, int exp, int value)
+    inline bool _compare_and_swap_weak(std::atomic<int>& dst, int exp, int value)
     {
         return dst.compare_exchange_strong(exp, value);
     }
