@@ -90,9 +90,7 @@ int main()
     HR;
     printf("# FORWARD TEST\n");
     {
-        //vee::call_by_tuple<void(test_object)> caller;
-        //caller(copy_test, std::make_tuple(test_object()));
-        //vee::call_via_tuple<void(test_object&)>(copy_test, std::make_tuple(test_object()));
+        vee::call_by_tuple(copy_test, std::make_tuple(test_object()));
     }
     HR;
     printf("# ACTOR TEST\n");
@@ -101,10 +99,10 @@ int main()
     e += sum;
     e(std::make_tuple(1, 2));
     //e(std::make_tuple(1, 2));
-    actor.request(e, 1, 2);
-    //actor.request(std::move(e), 1, 2);
-    //actor.request(&e, 1, 2);
-    //actor.request(e, std::make_tuple(1, 2));
+    while(!actor.try_request(e, 1, 2));
+    while(!actor.try_request(&e, 1, 2));
+    actor.try_request(e, std::make_tuple(3, 4));
+    while(!actor.try_request(std::move(e), 1, 2));
     getch();
     return 0;
 }
