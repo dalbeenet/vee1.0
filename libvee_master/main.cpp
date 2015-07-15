@@ -70,16 +70,36 @@ void copy_test(test_object& lvalue)
 //    printf("%s\n", __FUNCSIG__);
 //}
 
+int g_i = 0;
+
+void producer()
+{
+    std::_Atomic_thread_fence(std::memory_order_release);
+    for (int i = 0; i < 5000000; ++i)
+    {
+        ++g_i;
+    }
+    //std::this_thread::sleep_for(std::chrono::milliseconds::duration(3000));
+}
+
+void consumer()
+{
+    std::_Atomic_thread_fence(std::memory_order_acquire);
+    printf("g_i is %d\n", g_i);
+}
+
 #include <typeinfo.h>
 
 int main()
 {
     HR;
     printf("# SIGNAL TEST\n");
-    std::thread t1(sender);
-    std::thread t2(receiver);
-    t1.join();
-    t2.join();
+    {
+        std::thread t1(sender);
+        std::thread t2(receiver);
+        t1.join();
+        t2.join();
+    }
     HR;
     printf("# TUPLE UNPACKER TEST\n");
     {
@@ -94,15 +114,26 @@ int main()
     }
     HR;
     printf("# ACTOR TEST\n");
-    vee::actor<int(int, int)> actor;
-    vee::delegate<int(int, int)> e;
-    e += sum;
-    e(std::make_tuple(1, 2));
-    //e(std::make_tuple(1, 2));
-    while(!actor.try_request(e, 1, 2));
-    while(!actor.try_request(&e, 1, 2));
-    actor.try_request(e, std::make_tuple(3, 4));
-    while(!actor.try_request(std::move(e), 1, 2));
+    {
+        vee::actor<int(int, int)> actor;
+        vee::delegate<int(int, int)> e;
+        e += sum;
+        e(std::make_tuple(1, 2));
+        //e(std::make_tuple(1, 2));
+        while (!actor.try_request(e, 1, 2));
+        //while (!actor.try_request(&e, 1, 2));
+        actor.try_request(e, std::make_tuple(3, 4));
+        while (!actor.try_request(std::move(e), 1, 2));
+        //std::this_thread::sleep_for(std::chrono::milliseconds::duration(1000));
+    }
+    HR;
+    printf("MEMORY FENCE TEST\n");
+    std::thread t1(producer);
+    std::thread t2(consumer);
+    t1.join();
+    t2.join();
+    HR;
+    printf("Press any key to exit!\n");
     getch();
     return 0;
 }

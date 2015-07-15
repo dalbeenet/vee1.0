@@ -82,9 +82,9 @@ template <class RTy, class ...Args>
 class delegate < RTy(Args ...) >
 {
 public:
-    typedef delegate< RTy(Args ...) > type;
-    typedef type& reference_t;
-    typedef type&& rreference_t;
+    typedef delegate< RTy(Args ...) > this_t;
+    typedef this_t& reference_t;
+    typedef this_t&& rreference_t;
     typedef RTy(*funcptr_t)(Args ...);
     typedef int64_t key_t;
     typedef std::tuple<Args ...> argstuple_t;
@@ -100,14 +100,24 @@ public:
     // dtor
     ~delegate() = default;
     // copy ctor
-    delegate(reference_t _left)
+    delegate(const reference_t _left)
     {
         this->_deep_copy(_left);
     }
     // move ctor
     delegate(rreference_t _right)
     {
-        this->_deep_copy(_right);
+        this->_deep_copy(static_cast<rreference_t>(_right));
+    }
+    reference_t operator=(const reference_t _left)
+    {
+        this->_deep_copy(_left);
+        return *this;
+    }
+    reference_t operator=(rreference_t _right)
+    {
+        this->_deep_copy(static_cast<rreference_t>(_right));
+        return *this;
     }
     template <typename ...FwdArgs>
     void operator()(FwdArgs&& ...args)
@@ -190,10 +200,12 @@ private:
     void _deep_copy(reference_t _left)
     {
         _container = _left._container;
+        _idx_container = _left._idx_container;
     }
     void _deep_copy(rreference_t _right)
     {
         _container = std::move(_right._container);
+        _idx_container = std::move(_right._idx_container);
     }
 private:
     _container_t _container;
