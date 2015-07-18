@@ -14,7 +14,6 @@ public:
     typedef DataType data_type;
     syncronized_ringqueue(const std::size_t capacity):
         _capacity(capacity),
-        //_indexs_guard(ATOMIC_FLAG_INIT),
         _data_guards(capacity),
         _data_container(capacity),
         _overwrite_mode(false),
@@ -22,6 +21,7 @@ public:
         _front(0),
         _size(0)
     {
+        // in the msvc2013, std::atomic_flag is can not initialized with "ATOMIC_FLAG_INIT"
         _indexs_guard.clear();
         for (auto& it : _data_guards)
         {
@@ -69,7 +69,6 @@ public:
         _indexs_guard.clear(std::memory_order_release);
         
         _data_container[rear] = std::forward<FwdDataTy>(data);
-        //printf("input : %3d, rear : %3d\n", _data_container[rear], rear);
         _data_guards[rear].clear(std::memory_order_release);
         return true;
     }
@@ -92,7 +91,6 @@ public:
             data_type&&,
             data_type& >::type request_type;
         out = static_cast<request_type>(_data_container[front]);
-        //printf("output: %3d, front: %3d\n", out, front);
         _data_guards[front].clear(std::memory_order_release);
         return true;
     }

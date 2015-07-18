@@ -33,35 +33,40 @@ class actor < RTy(Args ...) >
 public:
     typedef vee::delegate<RTy(Args ...)> delegate;
     typedef std::tuple<Args ...> argstuple;
-    struct task
-    {
-        delegate    e;
-        argstuple   args;
-    };
-    actor()
+    typedef std::pair<delegate, argstuple> job;
+    actor(std::size_t queue_size):
+        _queue_size(queue_size),
+        _job_queue(queue_size)
     {
         _spawn();
     }
     ~actor()
     {
-        while(!try_kill());
+        kill();
     }
     template <class Delegate, typename ...FwdArgs>
-    bool try_request(Delegate&& _delegate, FwdArgs&& ... args)
+    inline int request(Delegate&& _delegate, FwdArgs&& ... args)
     {
-        return this->try_request(std::forward<Delegate>(_delegate), std::make_tuple(args ...));
+        return this->request(std::forward<Delegate>(_delegate), std::make_tuple(args ...));
     }
     template <class Delegate, class ArgsTuple>
-    bool try_request(Delegate&& _delegate, ArgsTuple&& _tuple)
+    int request(Delegate&& _delegate, ArgsTuple&& _tuple)
     {
-        if (!xactor::compare_and_swap_strong(_state, IDLE, READY))
-            return false;
-        _setup_delegate(std::forward<Delegate>(_delegate));
-        _setup_argspack(std::forward<ArgsTuple>(_tuple));
-        while(!_sigch.try_send(sigid::active));
-        return true;
+        /*_setup_delegate(std::forward<Delegate>(_delegate));
+        _setup_argspack(std::forward<ArgsTuple>(_tuple));*/
+        if (_state.load() == DEAD)
+        {
+            return -1;
+        }
+        int old_counter = _job_counter++;
+        while (!_job_queue.enqueue(std::make_pair(std::forward<Delegate>(_delegate), std::forward<ArgsTuple>(_tuple))));
+        if (old_counter == 0)
+        {
+            while(!_sigch.try_send(sigid::active));
+        }
+        return old_counter;
     }
-    bool try_kill()
+    bool kill()
     {
         if (!xactor::compare_and_swap_strong(_state, IDLE, DEAD))
             return false;
@@ -91,14 +96,14 @@ public:
 protected:
     void _spawn()
     {
-        std::thread t(&actor<RTy(Args...)>::_tmain, this);
+        std::thread t(&actor<RTy(Args...)>::_actormain, this);
         if (_sigch.recv() != sigid::spawn)
         {
             throw std::runtime_error("actor constructor receives invalid signal!");
         }
         t.swap(_thread);
     }
-    int _tmain()
+    int _actormain()
     {
         if (_state != SPAWN)
         {
@@ -128,59 +133,34 @@ protected:
     }
     bool _epoch()
     {
-        if (!xactor::compare_and_swap_strong(_state, READY, PROC))
-            return false;
-        auto& e = *_target_delegate;
-        e(*_target_argstuple);
+        job current_job;
+        while (true)
+        {
+            if (!_job_queue.dequeue(current_job))
+            {
+                throw std::runtime_error("actor::_epoch - job queue is empty!");
+                return false;
+            }
+            delegate& e = current_job.first;
+            argstuple& args = current_job.second;
+            e(args);
+            int old_counter = --_job_counter;
+            if (old_counter == 0)
+                break;
+        }
         if (!xactor::compare_and_swap_strong(_state, PROC, IDLE))
             return false;
         return true;
     }
-    void _setup_delegate(delegate& e) // lvalue type
-    {
-        DEBUG_PRINT("lvalue type %s\n", __FUNCTION__);
-        _delegate_container = e;
-        _target_delegate = &_delegate_container;
-    }
-    void _setup_delegate(delegate&& e) // rvalue type
-    {
-        DEBUG_PRINT("rvalue type %s\n", __FUNCTION__);
-        _delegate_container = static_cast<delegate&&>(e);
-        _target_delegate = &_delegate_container;
-    }
-    void _setup_delegate(delegate* e_ptr) // pointer type
-    {
-        DEBUG_PRINT("pointer type %s\n", __FUNCTION__);
-        _target_delegate = e_ptr;
-    }
-    void _setup_argspack(argstuple& _tuple) // lvaue type
-    {
-        DEBUG_PRINT("lvaue type %s\n", __FUNCTION__);
-        _args_container = _tuple;
-        _target_argstuple = &_args_container;
-    }
-    void _setup_argspack(argstuple&& _tuple) // rvalue type
-    {
-        DEBUG_PRINT("rvalue type %s\n", __FUNCTION__);
-        _args_container = static_cast<argstuple&&>(_tuple);
-        _target_argstuple = &_args_container;
-    }
-    void _setup_argspack(argstuple* _tuple_ptr) // pointer type
-    {
-        DEBUG_PRINT("pointer type %s\n", __FUNCTION__);
-        _target_argstuple = _tuple_ptr;
-    }
 private:
     vee::signal_channel<sigid> _sigch;
+    vee::syncronized_ringqueue<job> _job_queue;
+    std::atomic<int> _job_counter = 0;
     std::thread _thread;
     std::atomic<int> _state = SPAWN;
-    delegate _delegate_container;
-    argstuple _args_container;
-    delegate* _target_delegate = nullptr;
-    argstuple* _target_argstuple = nullptr;
+    std::size_t _queue_size;
     static const int SPAWN  = 0;
     static const int LOADED = 1;
-    static const int READY  = 2;
     static const int IDLE   = 3;
     static const int PROC   = 4;
     static const int DEAD   = 5;

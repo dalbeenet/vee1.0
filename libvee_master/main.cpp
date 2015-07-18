@@ -1,4 +1,3 @@
-#include <vee/queue.h>
 #include <vee/actor.h>
 #include <conio.h>
 #define HR for(int i = 0; i < 80; ++i) printf("_")
@@ -62,16 +61,6 @@ void copy_test(test_object& lvalue)
 {
     printf("%s\n", __FUNCSIG__);
 }
-//
-//void copy_test(test_object&& rvalue)
-//{
-//    printf("%s\n", __FUNCSIG__);
-//}
-//
-//void copy_test(test_object* ptr)
-//{
-//    printf("%s\n", __FUNCSIG__);
-//}
 
 #include <typeinfo.h>
 
@@ -100,16 +89,13 @@ int main()
     HR;
     printf("# ACTOR TEST\n");
     {
-        vee::actor<int(int, int)> actor;
+        const int JOB_QUEUE_SIZE = 100;
+        vee::actor<int(int, int)> actor(JOB_QUEUE_SIZE);
         vee::delegate<int(int, int)> e;
         e += sum;
-        e(std::make_tuple(1, 2));
-        //e(std::make_tuple(1, 2));
-        while (!actor.try_request(e, 1, 2));
-        //while (!actor.try_request(&e, 1, 2));
-        actor.try_request(e, std::make_tuple(3, 4));
-        while (!actor.try_request(std::move(e), 1, 2));
-        //std::this_thread::sleep_for(std::chrono::milliseconds::duration(1000));
+        printf("job requested! returns: %d\n", actor.request(e, 1, 2));
+        printf("job requested! returns: %d\n", actor.request(e, std::make_tuple(3, 4)));
+        printf("job requested! returns: %d\n", actor.request(std::move(e), 1, 2));
     }
     HR;
     printf("BUSYWAIT QUEUE TEST\n");
@@ -139,7 +125,7 @@ int main()
         auto consumer = [&queue, &result]()
         {
             int buf = 0, cnt = 0;
-            for (int i = 0; i < 500; ++i)
+            for (int i = 0; i < 250; ++i)
             {
                 while (!queue.dequeue(buf))
                 {
@@ -161,7 +147,7 @@ int main()
         int buf = 0;
         while (result.dequeue(buf))
         {
-            printf("value: %d\n", buf);
+            //printf("value: %d\n", buf);
         }
     }
     printf("Press any key to exit!\n");

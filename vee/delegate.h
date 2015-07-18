@@ -100,23 +100,23 @@ public:
     // dtor
     ~delegate() = default;
     // copy ctor
-    delegate(const reference_t _left)
+    delegate(const delegate < RTy(Args ...) >& rhs)
     {
-        this->_deep_copy(_left);
+        this->_deep_copy(rhs);
     }
     // move ctor
-    delegate(rreference_t _right)
+    delegate(delegate < RTy(Args ...) >&& rhs)
     {
-        this->_deep_copy(static_cast<rreference_t>(_right));
+        this->_deep_copy(static_cast<rreference_t>(rhs));
     }
-    reference_t operator=(const reference_t _left)
+    reference_t operator=(const delegate < RTy(Args ...) >& rhs)
     {
-        this->_deep_copy(_left);
+        this->_deep_copy(rhs);
         return *this;
     }
-    reference_t operator=(rreference_t _right)
+    reference_t operator=(delegate < RTy(Args ...) >&& rhs)
     {
-        this->_deep_copy(static_cast<rreference_t>(_right));
+        this->_deep_copy(static_cast<rreference_t>(rhs));
         return *this;
     }
     template <typename ...FwdArgs>
@@ -197,15 +197,15 @@ public:
         return false;
     }
 private:
-    void _deep_copy(reference_t _left)
+    void _deep_copy(const delegate < RTy(Args ...) >& rhs)
     {
-        _container = _left._container;
-        _idx_container = _left._idx_container;
+        _container = rhs._container;
+        _idx_container = rhs._idx_container;
     }
-    void _deep_copy(rreference_t _right)
+    void _deep_copy(delegate < RTy(Args ...) >&& rhs)
     {
-        _container = std::move(_right._container);
-        _idx_container = std::move(_right._idx_container);
+        _container = std::move(rhs._container);
+        _idx_container = std::move(rhs._idx_container);
     }
 private:
     _container_t _container;
