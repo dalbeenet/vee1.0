@@ -3,6 +3,7 @@
 
 #include <vee/signal_channel.h>
 #include <vee/delegate.h>
+#include <vee/queue.h>
 #include <tuple>
 #include <mutex>
 
@@ -32,6 +33,11 @@ class actor < RTy(Args ...) >
 public:
     typedef vee::delegate<RTy(Args ...)> delegate;
     typedef std::tuple<Args ...> argstuple;
+    struct task
+    {
+        delegate    e;
+        argstuple   args;
+    };
     actor()
     {
         _spawn();
@@ -164,7 +170,7 @@ protected:
         DEBUG_PRINT("pointer type %s\n", __FUNCTION__);
         _target_argstuple = _tuple_ptr;
     }
-protected:
+private:
     vee::signal_channel<sigid> _sigch;
     std::thread _thread;
     std::atomic<int> _state = SPAWN;

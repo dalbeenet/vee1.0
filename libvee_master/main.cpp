@@ -121,10 +121,11 @@ int main()
         a = static_cast<test_object&>(b);
         puts("RIGHT REFERENCE CAST");
         a = static_cast<test_object&&>(b);
-        vee::ringqueue_sync<int> queue(100);
-        vee::ringqueue_sync<int> result(5000);
+        vee::syncronized_ringqueue<int> queue(100);
+        vee::syncronized_ringqueue<int> result(500);
         auto producer = [&queue]()
         {
+            std::this_thread::sleep_for(std::chrono::milliseconds::duration(100));
             int cnt = 0;
             for (int i = 0; i < 500; ++i)
             {
@@ -138,13 +139,14 @@ int main()
         auto consumer = [&queue, &result]()
         {
             int buf = 0, cnt = 0;
-            for (int i = 0; i < 250; ++i)
+            for (int i = 0; i < 500; ++i)
             {
                 while (!queue.dequeue(buf))
                 {
                     ++cnt;
                 }
-                
+                //printf("tid: %d\n", std::this_thread::get_id());
+                result.enqueue(buf);
                 //printf("value: %d\n", buf);
                 buf = -1;
             }
@@ -156,6 +158,11 @@ int main()
         t1.join();
         t2.join();
         t3.join();
+        int buf = 0;
+        while (result.dequeue(buf))
+        {
+            printf("value: %d\n", buf);
+        }
     }
     printf("Press any key to exit!\n");
     getch();
