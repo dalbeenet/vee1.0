@@ -106,11 +106,9 @@ protected:
             switch (_sigch.recv())
             {
             case sigid::active:
-                DEBUG_PRINT("job requested!\n");
                 _epoch();
                 break;
             case sigid::go_exit:
-                //DEBUG_PRINT("go exit!");
                 // exit process
                 while(!_sigch.try_send(sigid::exit_ok));
                 _state = DEAD;

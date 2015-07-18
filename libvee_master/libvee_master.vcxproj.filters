@@ -25,7 +25,7 @@
       <Filter>vee</Filter>
     </ClInclude>
     <ClInclude Include="..\vee\type_parser.h" />
-    <ClInclude Include="..\vee\lockfree.h" />
+    <ClInclude Include="..\vee\queue.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />

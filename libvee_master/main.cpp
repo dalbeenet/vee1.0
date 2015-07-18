@@ -1,3 +1,4 @@
+#include <vee/queue.h>
 #include <vee/actor.h>
 #include <conio.h>
 #define HR for(int i = 0; i < 80; ++i) printf("_")
@@ -48,10 +49,12 @@ struct test_object
     test_object& operator=(test_object&)
     {
         printf("%s\n", __FUNCSIG__);
+        return *this;
     }
     test_object& operator=(test_object&&)
     {
         printf("%s\n", __FUNCSIG__);
+        return *this;
     }
 };
 
@@ -69,24 +72,6 @@ void copy_test(test_object& lvalue)
 //{
 //    printf("%s\n", __FUNCSIG__);
 //}
-
-int g_i = 0;
-
-void producer()
-{
-    std::_Atomic_thread_fence(std::memory_order_release);
-    for (int i = 0; i < 5000000; ++i)
-    {
-        ++g_i;
-    }
-    //std::this_thread::sleep_for(std::chrono::milliseconds::duration(3000));
-}
-
-void consumer()
-{
-    std::_Atomic_thread_fence(std::memory_order_acquire);
-    printf("g_i is %d\n", g_i);
-}
 
 #include <typeinfo.h>
 
@@ -127,12 +112,51 @@ int main()
         //std::this_thread::sleep_for(std::chrono::milliseconds::duration(1000));
     }
     HR;
-    printf("MEMORY FENCE TEST\n");
-    std::thread t1(producer);
-    std::thread t2(consumer);
-    t1.join();
-    t2.join();
-    HR;
+    printf("BUSYWAIT QUEUE TEST\n");
+    {
+        test_object a, b;
+        puts("TYPE CAST");
+        a = static_cast<test_object>(b);
+        puts("REFERENCE CAST");
+        a = static_cast<test_object&>(b);
+        puts("RIGHT REFERENCE CAST");
+        a = static_cast<test_object&&>(b);
+        vee::ringqueue_sync<int> queue(100);
+        vee::ringqueue_sync<int> result(5000);
+        auto producer = [&queue]()
+        {
+            int cnt = 0;
+            for (int i = 0; i < 500; ++i)
+            {
+                while (!queue.enqueue(i))
+                {
+                    ++cnt;
+                }
+            }
+            printf("Enqueue failure!!! %d times\n", cnt);
+        };
+        auto consumer = [&queue, &result]()
+        {
+            int buf = 0, cnt = 0;
+            for (int i = 0; i < 250; ++i)
+            {
+                while (!queue.dequeue(buf))
+                {
+                    ++cnt;
+                }
+                
+                //printf("value: %d\n", buf);
+                buf = -1;
+            }
+            printf("Dequeue failure!!! %d times\n", cnt);
+        };
+        std::thread t1(producer);
+        std::thread t2(consumer);
+        std::thread t3(consumer);
+        t1.join();
+        t2.join();
+        t3.join();
+    }
     printf("Press any key to exit!\n");
     getch();
     return 0;
