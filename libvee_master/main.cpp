@@ -1,4 +1,4 @@
-#include <vee/actor.h>
+#include <vee/scheduler.h>
 #include <conio.h>
 #define HR for(int i = 0; i < 80; ++i) printf("_")
 
@@ -100,13 +100,6 @@ int main()
     HR;
     printf("BUSYWAIT QUEUE TEST\n");
     {
-        test_object a, b;
-        puts("TYPE CAST");
-        a = static_cast<test_object>(b);
-        puts("REFERENCE CAST");
-        a = static_cast<test_object&>(b);
-        puts("RIGHT REFERENCE CAST");
-        a = static_cast<test_object&&>(b);
         vee::syncronized_ringqueue<int> queue(100);
         vee::syncronized_ringqueue<int> result(500);
         auto producer = [&queue]()
@@ -150,6 +143,12 @@ int main()
             //printf("value: %d\n", buf);
         }
     }
+    HR;
+    printf("SCHEDULER TEST\n");
+    {
+        vee::actor_group<int(int, int)> scheduler(4, 100);
+    }
+    HR;
     printf("Press any key to exit!\n");
     getch();
     return 0;

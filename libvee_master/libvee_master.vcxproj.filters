@@ -26,6 +26,7 @@
     </ClInclude>
     <ClInclude Include="..\vee\type_parser.h" />
     <ClInclude Include="..\vee\queue.h" />
+    <ClInclude Include="..\vee\scheduler.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />

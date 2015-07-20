@@ -43,6 +43,7 @@ public:
     ~actor()
     {
         kill();
+        printf("actor is destroyed!\n");
     }
     template <class Delegate, typename ...FwdArgs>
     inline int request(Delegate&& _delegate, FwdArgs&& ... args)
@@ -54,7 +55,7 @@ public:
     {
         /*_setup_delegate(std::forward<Delegate>(_delegate));
         _setup_argspack(std::forward<ArgsTuple>(_tuple));*/
-        if (_state.load() == DEAD)
+        if (!_workable || _state.load() == DEAD)
         {
             return -1;
         }
@@ -68,6 +69,7 @@ public:
     }
     bool kill()
     {
+        _workable = false;
         if (!xactor::compare_and_swap_strong(_state, IDLE, DEAD))
             return false;
         _thread.detach();
@@ -102,6 +104,7 @@ protected:
             throw std::runtime_error("actor constructor receives invalid signal!");
         }
         t.swap(_thread);
+        _workable = true;
     }
     int _actormain()
     {
@@ -153,12 +156,22 @@ protected:
         return true;
     }
 private:
+    //! DISALLOW DEFAULT CONSTRUCTOR
+    actor() = delete;
+    //! DISALLOW COPY AND ASSIGNMENT
+    actor(const actor < RTy(Args ...) >&) = delete;
+    void operator=(const actor < RTy(Args ...) >&) = delete;
+    //! DISALLOW MOVE AND ASSIGNMENT
+    actor(actor < RTy(Args ...) >&&) = delete;
+    void operator=(actor < RTy(Args ...) >&&) = delete;
+private:
     vee::signal_channel<sigid> _sigch;
     vee::syncronized_ringqueue<job> _job_queue;
     std::atomic<int> _job_counter = 0;
     std::thread _thread;
     std::atomic<int> _state = SPAWN;
     std::size_t _queue_size;
+    std::atomic<bool> _workable = false;
     static const int SPAWN  = 0;
     static const int LOADED = 1;
     static const int IDLE   = 3;
