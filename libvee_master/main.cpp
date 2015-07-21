@@ -23,7 +23,7 @@ int sender()
 
 int sum(int a, int b)
 {
-    printf("%d + %d = %d\n", a, b, a + b);
+    //printf("%d + %d = %d\n", a, b, a + b);
     return a + b;
 }
 
@@ -144,9 +144,24 @@ int main()
         }
     }
     HR;
-    printf("SCHEDULER TEST\n");
     {
-        vee::actor_group<int(int, int)> scheduler(4, 100);
+        printf("SCHEDULER TEST\n");
+        {
+            // scheduler(초기 액터 갯수, 액터 당 작업 큐 용량)
+            vee::scheduler<int(int, int)> scheduler(4, 1000);
+            vee::delegate<int(int, int)> e;
+            e += sum;
+            e += [](int a, int b) -> int
+            {
+                std::this_thread::sleep_for(std::chrono::milliseconds::duration(50));
+                return a - b;
+            };
+            for (int i = 0; i < 100; ++i)
+            {
+                scheduler.request(e, 1, 2);
+                scheduler.request(e, 3, 4);
+            }
+        }
     }
     HR;
     printf("Press any key to exit!\n");

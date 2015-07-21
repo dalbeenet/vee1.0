@@ -33,12 +33,20 @@ class actor < RTy(Args ...) >
 public:
     typedef vee::delegate<RTy(Args ...)> delegate;
     typedef std::tuple<Args ...> argstuple;
-    typedef std::pair<delegate, argstuple> job;
-    actor(std::size_t queue_size):
-        _queue_size(queue_size),
-        _job_queue(queue_size)
+    typedef std::pair<delegate, argstuple> mail;
+    actor(std::size_t mailbox_size):
+        _queue_size(mailbox_size),
+        _mailbox(mailbox_size),
+        _mailbox_ptr(&_mailbox)
     {
         _spawn();
+    }
+    actor(vee::syncronized_ringqueue<mail>* mailbox_ptr):
+        _queue_size(mailbox_ptr->capacity()),
+        _mailbox(0),
+        _mailbox_ptr(&mailbox_ptr)
+    {
+        
     }
     ~actor()
     {
@@ -59,11 +67,14 @@ public:
         {
             return -1;
         }
-        int old_counter = _job_counter++;
-        while (!_job_queue.enqueue(std::make_pair(std::forward<Delegate>(_delegate), std::forward<ArgsTuple>(_tuple))));
+        int old_counter = _mailbox_counter++;
+        while (!(_mailbox_ptr->enqueue(std::make_pair(std::forward<Delegate>(_delegate), std::forward<ArgsTuple>(_tuple)))));
         if (old_counter == 0)
         {
-            while(!_sigch.try_send(sigid::active));
+            while (!_sigch.try_send(sigid::active))
+            {
+                std::this_thread::sleep_for(std::chrono::microseconds::duration(1));
+            }
         }
         return old_counter;
     }
@@ -71,9 +82,14 @@ public:
     {
         _workable = false;
         if (!xactor::compare_and_swap_strong(_state, IDLE, DEAD))
+        {
             return false;
+        }
         _thread.detach();
-        while (!_sigch.try_send(sigid::go_exit));
+        while (!_sigch.try_send(sigid::go_exit))
+        {
+            std::this_thread::sleep_for(std::chrono::microseconds::duration(1));
+        }
         while (_sigch.recv() != sigid::exit_ok);
         return true;
     }
@@ -136,18 +152,17 @@ protected:
     }
     bool _epoch()
     {
-        job current_job;
+        mail current_job;
         while (true)
         {
-            if (!_job_queue.dequeue(current_job))
+            if (!(_mailbox_ptr->dequeue(current_job)))
             {
-                throw std::runtime_error("actor::_epoch - job queue is empty!");
                 return false;
             }
             delegate& e = current_job.first;
             argstuple& args = current_job.second;
             e(args);
-            int old_counter = --_job_counter;
+            int old_counter = --_mailbox_counter;
             if (old_counter == 0)
                 break;
         }
@@ -166,8 +181,9 @@ private:
     void operator=(actor < RTy(Args ...) >&&) = delete;
 private:
     vee::signal_channel<sigid> _sigch;
-    vee::syncronized_ringqueue<job> _job_queue;
-    std::atomic<int> _job_counter = 0;
+    vee::syncronized_ringqueue<mail> _mailbox;
+    vee::syncronized_ringqueue<mail>* _mailbox_ptr;
+    std::atomic<int> _mailbox_counter = 0;
     std::thread _thread;
     std::atomic<int> _state = SPAWN;
     std::size_t _queue_size;
@@ -177,6 +193,55 @@ private:
     static const int IDLE   = 3;
     static const int PROC   = 4;
     static const int DEAD   = 5;
+};
+
+template <class FTy>
+class actor_group
+{
+    typedef std::shared_ptr< actor<FTy> > actor_ptr_type;
+public:
+    actor_group(unsigned int count, unsigned int mailbox_size)
+    {
+        for (unsigned int i = 0; i < count; ++i)
+        {
+            add_actor(mailbox_size);
+        }
+    }
+    std::size_t add_actor(std::size_t mailbox_size)
+    {
+        std::lock_guard<std::mutex> guard(_container_lock);
+        _actor_pointers.push_back(std::make_shared< actor<FTy> >(mailbox_size));
+        int ret = ++_size;
+        return ret;
+    }
+    std::size_t remove_actor()
+    {
+        std::lock_guard<std::mutex> guard(_container_lock);
+        int ret = --_size;
+        _actor_pointers.pop_back();
+        return ret;
+    }
+    inline int capacity()
+    {
+        return _size;
+    }
+    inline actor<FTy>* at(unsigned int idx)
+    {
+        if (idx >= _actor_pointers.size())
+        {
+            return nullptr;
+        }
+        actor<FTy>* ptr = _actor_pointers[idx].get();
+        return ptr;
+    }
+    inline actor<FTy>* operator[](unsigned int idx)
+    {
+        return this->at(idx);
+    }
+protected:
+    std::vector<actor_ptr_type> _actor_pointers;
+    std::atomic<int> _size;
+    std::mutex  _container_lock;
 };
 
 _VEE_END

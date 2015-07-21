@@ -94,6 +94,10 @@ public:
         _data_guards[front].clear(std::memory_order_release);
         return true;
     }
+    inline std::size_t capacity()
+    {
+        return _capacity;
+    }
 private:
     // default ctor is deleted.
     syncronized_ringqueue() = delete;

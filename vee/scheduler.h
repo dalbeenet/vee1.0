@@ -7,46 +7,54 @@
 _VEE_BEGIN
 
 template <class FTy>
-class actor_group
+class scheduler
 {
-    typedef std::shared_ptr< actor<FTy> > actor_ptr_type;
 public:
-    actor_group(unsigned int count, unsigned int mailbox_size)
+    scheduler(unsigned int count, unsigned int mailbox_size):
+        actor_group(count, mailbox_size)
     {
-        for (int i = 0; i < count; ++i)
+        
+    }
+    template <class Delegate, typename ...FwdArgs>
+    inline int request(Delegate&& _delegate, FwdArgs&& ... args)
+    {
+        return this->request(std::forward<Delegate>(_delegate), std::make_tuple(args ...));
+    }
+    template <class Delegate, class ArgsTuple>
+    bool request(Delegate&& _delegate, ArgsTuple&& _tuple)
+    {
+        actor<FTy>* current_actor = nullptr;
+        while (true)
         {
-            add_actor(mailbox_size);
+            int i = _get_current_actor_index();
+            if (i < 0)
+                return false;
+            current_actor = actor_group.at(i);
+            if (current_actor == nullptr)
+                continue;
+            if (current_actor->request(
+                std::forward<Delegate>(_delegate),
+                std::forward<ArgsTuple>(_tuple)) >= 0)
+            {
+                //printf("Actor id %d\n", i);
+                break;
+            }
         }
+        return true;
     }
-    std::size_t add_actor(std::size_t mailbox_size)
+private:
+    int _get_current_actor_index()
     {
-        std::lock_guard<std::mutex> guard(_container_lock);
-        _actor_pointers.push_back(std::make_shared(mailbox_size));
-        return _actor_pointers.size();
+        static std::atomic<int> counter = 0;
+        int i = counter++;
+        int capacity = actor_group.capacity();
+        if (capacity == 0)
+            return -1;
+        i %= capacity;
+        return i;
     }
-    std::size_t remove_actor()
-    {
-        std::lock_guard<std::mutex> guard(_container_lock);
-        _actor_pointers.pop_back();
-        return _actor_pointers.size();
-    }
-    inline actor<FTy>& at(unsigned int idx)
-    {
-        if (idx >= _actor_pointers.size())
-        {
-            throw ::std::runtime_error("actor_group::at - out of bounds!");
-        }
-        actor<FTy>& ref = *_actor_pointers[idx];
-        return ref;
-    }
-    inline actor<FTy>& operator[](unsigned int idx)
-    {
-        actor<FTy>& ref = *_actor_pointers[idx];
-        return ref;
-    }
-protected:
-    std::vector<actor_ptr_type> _actor_pointers;
-    std::mutex  _container_lock;
+public:
+    actor_group<FTy> actor_group;
 };
 
 _VEE_END
