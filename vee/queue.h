@@ -27,7 +27,6 @@ public:
         {
             it.clear();
         }
-        
     }
     ~syncronized_ringqueue()
     {
@@ -85,12 +84,14 @@ public:
         ++_front %= _capacity;
         while (_data_guards[front].test_and_set(std::memory_order_acquire));
         _indexs_guard.clear(std::memory_order_release);
-        
+        typedef std::remove_reference<data_type>::type orig_type;
         typedef std::conditional <
-            std::is_nothrow_move_assignable<data_type>::value,
-            data_type&&,
-            data_type& >::type request_type;
+            std::is_move_assignable<orig_type>::value,
+            std::add_rvalue_reference<orig_type>::type,
+            std::add_lvalue_reference<orig_type>::type >::type request_type;
+        //static_assert(std::is_rvalue_reference<request_type>::value, "THIS IS NOT RVALUE REFERENCE!");
         out = static_cast<request_type>(_data_container[front]);
+        //out = std::move(_data_container[front]);
         _data_guards[front].clear(std::memory_order_release);
         return true;
     }

@@ -199,13 +199,21 @@ public:
 private:
     void _deep_copy(const delegate < RTy(Args ...) >& rhs)
     {
-        _container = rhs._container;
-        _idx_container = rhs._idx_container;
+        static int call_count = 0;
+        //printf("LVALUE CALL %d\n", ++call_count);
+        if (rhs._container.size() > 0)
+            _container = rhs._container;
+        if (rhs._idx_container.size() > 0)
+            _idx_container = rhs._idx_container;
     }
     void _deep_copy(delegate < RTy(Args ...) >&& rhs)
     {
-        _container = std::move(rhs._container);
-        _idx_container = std::move(rhs._idx_container);
+        static int call_count = 0;
+        //printf("RVALUE CALL %d\n", ++call_count);
+        if (rhs._container.size() > 0)
+            _container = std::move(rhs._container);
+        if (rhs._idx_container.size() > 0)
+            _idx_container = std::move(rhs._idx_container);
     }
 private:
     _container_t _container;

@@ -67,13 +67,20 @@ public:
         {
             return -1;
         }
+        if (!(_mailbox_ptr->enqueue(std::make_pair(std::forward<Delegate>(_delegate), std::forward<ArgsTuple>(_tuple)))))
+        {
+            return -2;
+        }
         int old_counter = _mailbox_counter++;
-        while (!(_mailbox_ptr->enqueue(std::make_pair(std::forward<Delegate>(_delegate), std::forward<ArgsTuple>(_tuple)))));
         if (old_counter == 0)
         {
+            while (!xactor::compare_and_swap_strong(_state, IDLE, PROC))
+            {
+            //    throw std::runtime_error("actor::request CAS failure!!");
+            }
             while (!_sigch.try_send(sigid::active))
             {
-                std::this_thread::sleep_for(std::chrono::microseconds::duration(1));
+                //std::this_thread::sleep_for(std::chrono::microseconds::duration(1));
             }
         }
         return old_counter;
@@ -81,14 +88,14 @@ public:
     bool kill()
     {
         _workable = false;
-        if (!xactor::compare_and_swap_strong(_state, IDLE, DEAD))
+        while (!xactor::compare_and_swap_strong(_state, IDLE, DEAD))
         {
-            return false;
+            std::this_thread::sleep_for(std::chrono::microseconds::duration(1));
         }
         _thread.detach();
         while (!_sigch.try_send(sigid::go_exit))
         {
-            std::this_thread::sleep_for(std::chrono::microseconds::duration(1));
+            //std::this_thread::sleep_for(std::chrono::microseconds::duration(1));
         }
         while (_sigch.recv() != sigid::exit_ok);
         return true;
@@ -120,7 +127,6 @@ protected:
             throw std::runtime_error("actor constructor receives invalid signal!");
         }
         t.swap(_thread);
-        _workable = true;
     }
     int _actormain()
     {
@@ -131,6 +137,7 @@ protected:
         _state.store(LOADED);
         while (!_sigch.try_send(sigid::spawn));
         _state.store(IDLE);
+        _workable = true;
         while (true)
         {
             switch (_sigch.recv())
@@ -167,7 +174,10 @@ protected:
                 break;
         }
         if (!xactor::compare_and_swap_strong(_state, PROC, IDLE))
+        {
+            throw std::runtime_error("actor::_epoch CAS failure!!");
             return false;
+        }
         return true;
     }
 private:

@@ -31,12 +31,13 @@ public:
                 return false;
             current_actor = actor_group.at(i);
             if (current_actor == nullptr)
+            {
                 continue;
+            }
             if (current_actor->request(
                 std::forward<Delegate>(_delegate),
                 std::forward<ArgsTuple>(_tuple)) >= 0)
             {
-                //printf("Actor id %d\n", i);
                 break;
             }
         }
