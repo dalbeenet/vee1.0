@@ -145,6 +145,12 @@ protected:
     int _size;
 };
 
+template <class DataType>
+class ringqueue: public syncronized_ringqueue < DataType, vee::empty_mutex, vee::empty_mutex >
+{
+
+};
+
 _VEE_END
 
 #endif // _VEE_QUEUE_H_
