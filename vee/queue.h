@@ -7,25 +7,30 @@
 
 _VEE_BEGIN
 
-template <typename DataType>
+template <
+    class DataType, 
+    class ItemGuardType = vee::spin_lock, 
+    class IndexGuardType = vee::spin_lock >
 class syncronized_ringqueue
 {
 public:
     typedef DataType data_type;
+    typedef ItemGuardType item_guard_type;
+    typedef IndexGuardType index_guard_type;
     syncronized_ringqueue(const std::size_t capacity):
         _capacity(capacity),
-        _data_guards(capacity),
-        _data_container(capacity),
+        _item_guards(capacity),
+        _item_container(capacity),
         _overwrite_mode(false),
         _rear(0),
         _front(0),
         _size(0)
     {
-
+        // nothing to do.
     }
     ~syncronized_ringqueue()
     {
-        
+        // nothing to do.
     }
     inline bool is_empty()
     {
@@ -43,9 +48,9 @@ public:
     bool enqueue(FwdDataTy&& data)
     {
         int rear = 0;
-        std::unique_lock<vee::spin_lock> item_lock;
+        std::unique_lock<typename item_guard_type> item_lock;
         {
-            std::lock_guard<vee::spin_lock> index_lock(_indexs_guard);
+            std::lock_guard<typename index_guard_type> index_lock(_index_guard);
             rear = _rear;
             if (is_full())
             {
@@ -61,15 +66,15 @@ public:
                 ++_rear %= _capacity;
                 ++_size;
             }
-            std::unique_lock<vee::spin_lock> item_lock_temp(_data_guards[rear], std::adopt_lock);
+            std::unique_lock<typename item_guard_type> item_lock_temp(_item_guards[rear], std::adopt_lock);
             std::swap(item_lock, item_lock_temp);
         }
-        _data_container[rear] = std::forward<FwdDataTy>(data);
+        _item_container[rear] = std::forward<FwdDataTy>(data);
         return true;
     }
     bool dequeue()
     {
-        std::lock_guard<vee::spin_lock> index_lock(_indexs_guard);
+        std::lock_guard<typename index_guard_type> index_lock(_index_guard);
         if (!_size)
         {
             return false;
@@ -82,9 +87,9 @@ public:
     bool dequeue(data_type& out)
     {
         int front = 0;
-        std::unique_lock<vee::spin_lock> item_lock;
+        std::unique_lock<typename item_guard_type> item_lock;
         {
-            std::lock_guard<vee::spin_lock> index_lock(_indexs_guard);
+            std::lock_guard<typename index_guard_type> index_lock(_index_guard);
             if (!_size)
             {
                 return false;
@@ -93,7 +98,7 @@ public:
             front = _front;
             ++_front %= _capacity;
 
-            std::unique_lock<vee::spin_lock> item_lock_temp(_data_guards[front], std::adopt_lock);
+            std::unique_lock<typename item_guard_type> item_lock_temp(_item_guards[front], std::adopt_lock);
             std::swap(item_lock, item_lock_temp);
         }
         typedef std::remove_reference<data_type>::type orig_type;
@@ -101,7 +106,7 @@ public:
             std::is_move_assignable<orig_type>::value,
             std::add_rvalue_reference<orig_type>::type,
             std::add_lvalue_reference<orig_type>::type >::type request_type;
-        out = static_cast<request_type>(_data_container[front]);
+        out = static_cast<request_type>(_item_container[front]);
         return true;
     }
     void clear()
@@ -130,10 +135,10 @@ private:
     // default ctor is deleted.
     syncronized_ringqueue() = delete;
 protected:
-    std::vector< vee::spin_lock > _data_guards;
-    std::vector<data_type>  _data_container;
+    std::vector< typename item_guard_type > _item_guards;
+    std::vector<data_type>  _item_container;
     std::size_t _capacity;
-    vee::spin_lock _indexs_guard;
+    typename index_guard_type _index_guard;
     bool _overwrite_mode;
     int _rear;
     int _front;
