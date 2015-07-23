@@ -17,6 +17,7 @@ void operator=(const TypeName&) = delete
 #define DISALLOW_MOVE_AND_ASSIGN(TypeName) \
 TypeName(const TypeName&&) = delete; \
 void operator=(const TypeName&&) = delete
+#define VEE_EMPTY_FUNCTION {}
 #define _VEE_ENABLE_LOGGING 1
 #ifdef _VEE_ENABLE_LOGGING
 #define DEBUG_PRINT(...) do{ fprintf( stderr, __VA_ARGS__ ); } while( false )

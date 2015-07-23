@@ -113,7 +113,7 @@ public:
 protected:
     inline bool _compare_and_swap_weak(std::atomic<int>& dst, int exp, int value)
     {
-        return dst.compare_exchange_strong(exp, value);
+        return dst.compare_exchange_weak(exp, value);
     }
 
 protected:

@@ -3,7 +3,7 @@
 
 #include <atomic>
 #include <vector>
-#include <vee/macro.h>
+#include <vee/lock.h>
 
 _VEE_BEGIN
 
@@ -21,12 +21,7 @@ public:
         _front(0),
         _size(0)
     {
-        // in the msvc2013, std::atomic_flag is can not initialized with "ATOMIC_FLAG_INIT"
-        _indexs_guard.clear();
-        for (auto& it : _data_guards)
-        {
-            it.clear();
-        }
+
     }
     ~syncronized_ringqueue()
     {
@@ -47,66 +42,98 @@ public:
     template <class FwdDataTy>
     bool enqueue(FwdDataTy&& data)
     {
-        while (_indexs_guard.test_and_set(std::memory_order_acquire));
-        int rear = _rear;
-        if (is_full())
+        int rear = 0;
+        std::unique_lock<vee::spin_lock> item_lock;
         {
-            if (!_overwrite_mode)
+            std::lock_guard<vee::spin_lock> index_lock(_indexs_guard);
+            rear = _rear;
+            if (is_full())
             {
-                _indexs_guard.clear(std::memory_order_release);
-                return false;
+                if (!_overwrite_mode)
+                {
+                    return false;
+                }
+                ++_rear %= _capacity;
+                ++_front %= _capacity;
             }
-            ++_rear %= _capacity;
-            ++_front %= _capacity;
+            else
+            {
+                ++_rear %= _capacity;
+                ++_size;
+            }
+            std::unique_lock<vee::spin_lock> item_lock_temp(_data_guards[rear], std::adopt_lock);
+            std::swap(item_lock, item_lock_temp);
         }
-        else
-        {
-            ++_rear %= _capacity;
-            ++_size;
-        }
-        while (_data_guards[rear].test_and_set(std::memory_order_acquire));
-        _indexs_guard.clear(std::memory_order_release);
-        
         _data_container[rear] = std::forward<FwdDataTy>(data);
-        _data_guards[rear].clear(std::memory_order_release);
         return true;
     }
-    bool dequeue(data_type& out)
+    bool dequeue()
     {
-        while (_indexs_guard.test_and_set(std::memory_order_acquire));
+        std::lock_guard<vee::spin_lock> index_lock(_indexs_guard);
         if (!_size)
         {
-            _indexs_guard.clear(std::memory_order_release);
             return false;
         }
         --_size;
         int front = _front;
         ++_front %= _capacity;
-        while (_data_guards[front].test_and_set(std::memory_order_acquire));
-        _indexs_guard.clear(std::memory_order_release);
+        return true;
+    }
+    bool dequeue(data_type& out)
+    {
+        int front = 0;
+        std::unique_lock<vee::spin_lock> item_lock;
+        {
+            std::lock_guard<vee::spin_lock> index_lock(_indexs_guard);
+            if (!_size)
+            {
+                return false;
+            }
+            --_size;
+            front = _front;
+            ++_front %= _capacity;
+
+            std::unique_lock<vee::spin_lock> item_lock_temp(_data_guards[front], std::adopt_lock);
+            std::swap(item_lock, item_lock_temp);
+        }
         typedef std::remove_reference<data_type>::type orig_type;
         typedef std::conditional <
             std::is_move_assignable<orig_type>::value,
             std::add_rvalue_reference<orig_type>::type,
             std::add_lvalue_reference<orig_type>::type >::type request_type;
-        //static_assert(std::is_rvalue_reference<request_type>::value, "THIS IS NOT RVALUE REFERENCE!");
         out = static_cast<request_type>(_data_container[front]);
-        //out = std::move(_data_container[front]);
-        _data_guards[front].clear(std::memory_order_release);
         return true;
+    }
+    void clear()
+    {
+        while (!this->dequeue());
     }
     inline std::size_t capacity()
     {
         return _capacity;
     }
+protected:
+    /*void _deep_copy(syncronized_ringqueue<data_type>& rhs)
+    {
+        while (_indexs_guard.test_and_set(std::memory_order_acquire));
+        while (rhs._indexs_guard.test_and_set(std::memory_order_acquire));
+
+        _indexs_guard.clear(std::memory_order_release);
+    }
+    void _deep_copy(syncronized_ringqueue<data_type>&& rhs)
+    {
+        while (_indexs_guard.test_and_set(std::memory_order_acquire));
+
+        _indexs_guard.clear(std::memory_order_release);
+    }*/
 private:
     // default ctor is deleted.
     syncronized_ringqueue() = delete;
 protected:
-    std::vector< std::atomic_flag > _data_guards;
+    std::vector< vee::spin_lock > _data_guards;
     std::vector<data_type>  _data_container;
     std::size_t _capacity;
-    std::atomic_flag _indexs_guard;
+    vee::spin_lock _indexs_guard;
     bool _overwrite_mode;
     int _rear;
     int _front;

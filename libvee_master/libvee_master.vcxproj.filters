@@ -4,6 +4,9 @@
     <Filter Include="vee">
       <UniqueIdentifier>{cb2c0b93-d607-4d22-a2e1-bd48d6f738d6}</UniqueIdentifier>
     </Filter>
+    <Filter Include="vee\lock_impl">
+      <UniqueIdentifier>{2e47f054-d75e-4e34-b52c-81740f63cf51}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\vee\vee.h">
@@ -39,8 +42,14 @@
     <ClInclude Include="..\vee\signal_channel.h">
       <Filter>vee</Filter>
     </ClInclude>
+    <ClInclude Include="..\vee\object_pool.h">
+      <Filter>vee</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="..\vee\lock\lock_impl.cpp">
+      <Filter>vee\lock_impl</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

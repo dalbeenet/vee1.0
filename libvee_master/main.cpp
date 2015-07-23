@@ -98,88 +98,90 @@ int main()
     printf("job requested! returns: %d\n", actor.request(e, std::make_tuple(3, 4)));
     printf("job requested! returns: %d\n", actor.request(std::move(e), 1, 2));
     }*/
+    HR;
+    printf("BUSYWAIT QUEUE TEST\n");
+    {
+        vee::syncronized_ringqueue<int> queue(100);
+        vee::syncronized_ringqueue<int> result(500);
+        auto producer = [&queue]()
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds::duration(100));
+            int cnt = 0;
+            for (int i = 0; i < 500; ++i)
+            {
+                while (!queue.enqueue(i))
+                {
+                    ++cnt;
+                }
+            }
+            printf("Enqueue failure!!! %d times\n", cnt);
+        };
+        auto consumer = [&queue, &result]()
+        {
+            int buf = 0, cnt = 0;
+            for (int i = 0; i < 250; ++i)
+            {
+                while (!queue.dequeue(buf))
+                {
+                    ++cnt;
+                }
+                //printf("tid: %d\n", std::this_thread::get_id());
+                result.enqueue(buf);
+                //printf("value: %d\n", buf);
+                buf = -1;
+            }
+            printf("Dequeue failure!!! %d times\n", cnt);
+        };
+        std::thread t1(producer);
+        std::thread t2(consumer);
+        std::thread t3(consumer);
+        t1.join();
+        t2.join();
+        t3.join();
+        int buf = 0;
+        while (result.dequeue(buf))
+        {
+            //printf("value: %d\n", buf);
+        }
+    }
     //HR;
-    //printf("BUSYWAIT QUEUE TEST\n");
     //{
-    //    vee::syncronized_ringqueue<int> queue(100);
-    //    vee::syncronized_ringqueue<int> result(500);
-    //    auto producer = [&queue]()
+    //    printf("SLEEP FUNCTION LOAD TEST\n");
+    //    vee::delegate<int(int, int)> e;
+    //    auto func = [](int a, int b) -> int
     //    {
-    //        std::this_thread::sleep_for(std::chrono::milliseconds::duration(100));
-    //        int cnt = 0;
-    //        for (int i = 0; i < 500; ++i)
-    //        {
-    //            while (!queue.enqueue(i))
-    //            {
-    //                ++cnt;
-    //            }
-    //        }
-    //        printf("Enqueue failure!!! %d times\n", cnt);
+    //        std::this_thread::sleep_for(std::chrono::milliseconds::duration(5));
+    //        return a - b;
     //    };
-    //    auto consumer = [&queue, &result]()
+    //    auto start = std::chrono::system_clock::now();
+    //    std::thread t1([func]()
     //    {
-    //        int buf = 0, cnt = 0;
-    //        for (int i = 0; i < 250; ++i)
-    //        {
-    //            while (!queue.dequeue(buf))
-    //            {
-    //                ++cnt;
-    //            }
-    //            //printf("tid: %d\n", std::this_thread::get_id());
-    //            result.enqueue(buf);
-    //            //printf("value: %d\n", buf);
-    //            buf = -1;
-    //        }
-    //        printf("Dequeue failure!!! %d times\n", cnt);
-    //    };
-    //    std::thread t1(producer);
-    //    std::thread t2(consumer);
-    //    std::thread t3(consumer);
+    //        for (int i = 0; i < 1000; ++i)
+    //            func(1, 2);
+    //    });
+    //    std::thread t2([func]()
+    //    {
+    //        for (int i = 0; i < 1000; ++i)
+    //            func(1, 2);
+    //    });
     //    t1.join();
     //    t2.join();
-    //    t3.join();
-    //    int buf = 0;
-    //    while (result.dequeue(buf))
-    //    {
-    //        //printf("value: %d\n", buf);
-    //    }
+    //    auto end = std::chrono::system_clock::now();
+    //    std::cout << "테스트 종료: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << std::endl;
     //}
     HR;
     {
-        printf("SLEEP FUNCTION LOAD TEST\n");
-        vee::delegate<int(int, int)> e;
-        auto func = [](int a, int b) -> int
-        {
-            std::this_thread::sleep_for(std::chrono::milliseconds::duration(5));
-            return a - b;
-        };
-        auto start = std::chrono::system_clock::now();
-        std::thread t1([func]()
-        {
-            for (int i = 0; i < 1000; ++i)
-                func(1, 2);
-        });
-        std::thread t2([func]()
-        {
-            for (int i = 0; i < 1000; ++i)
-                func(1, 2);
-        });
-        t1.join();
-        t2.join();
-        auto end = std::chrono::system_clock::now();
-        std::cout << "테스트 종료: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << std::endl;
-    }
-    HR;
-    {
         printf("SCHEDULER TEST\n");
+        std::atomic<int> counter;
         auto start = std::chrono::system_clock::now();
         {
             // scheduler(초기 액터 갯수, 액터 당 작업 큐 용량)
             vee::scheduler<int(int, int)> scheduler(2, 2000);
             vee::delegate<int(int, int)> e;
-            e += [](int a, int b) -> int
+            e += [&counter](int a, int b) -> int
             {
-                std::this_thread::sleep_for(std::chrono::milliseconds::duration(5));
+                ++counter;
+                //std::this_thread::sleep_for(std::chrono::milliseconds::duration(5));
                 return a - b;
             };
             for (int i = 0; i < 1000; ++i)
@@ -196,6 +198,7 @@ int main()
         }
         auto end = std::chrono::system_clock::now();
         std::cout << "스케줄러 종료: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << std::endl;
+        printf("counter: %d\n", counter);
     }
     HR;
     printf("Press any key to exit!\n");
