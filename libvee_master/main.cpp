@@ -99,7 +99,7 @@ int main()
     printf("job requested! returns: %d\n", actor.request(std::move(e), 1, 2));
     }*/
     HR;
-    printf("BUSYWAIT QUEUE TEST\n");
+    printf("QUEUE TEST\n");
     {
         vee::syncronized_ringqueue<int> queue(100);
         vee::syncronized_ringqueue<int> result(500);
@@ -138,10 +138,20 @@ int main()
         t1.join();
         t2.join();
         t3.join();
-        int buf = 0;
-        while (result.dequeue(buf))
+    }
+    HR;
+    printf("QUEUE COPY TEST\n");
+    {
+        vee::syncronized_ringqueue<int> B(100);
+        for (int i = 0; i < 100; ++i)
+            B.enqueue(i);
+        vee::syncronized_ringqueue<int> A(B);
+        //A = B;
+        for (int i = 0; i < 100; ++i)
         {
-            //printf("value: %d\n", buf);
+            int buf;
+            A.dequeue(buf);
+            printf("value: %d\n", buf);
         }
     }
     //HR;

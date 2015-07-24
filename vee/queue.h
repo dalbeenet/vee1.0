@@ -14,6 +14,7 @@ template <
 class syncronized_ringqueue
 {
 public:
+    typedef syncronized_ringqueue<DataType, ItemGuardType, IndexGuardType> this_type;
     typedef DataType data_type;
     typedef ItemGuardType item_guard_type;
     typedef IndexGuardType index_guard_type;
@@ -27,6 +28,14 @@ public:
         _size(0)
     {
         // nothing to do.
+    }
+    syncronized_ringqueue(const this_type& other): syncronized_ringqueue(other._capacity)
+    {
+        this->operator=(const_cast<this_type&>(other));
+    }
+    syncronized_ringqueue(this_type&& other): syncronized_ringqueue(other._capacity)
+    {
+        this->operator=(static_cast<this_type&&>(other));
     }
     ~syncronized_ringqueue()
     {
@@ -72,7 +81,7 @@ public:
         _item_container[rear] = std::forward<FwdDataTy>(data);
         return true;
     }
-    bool dequeue()
+    bool shallow_dequeue()
     {
         std::lock_guard<typename index_guard_type> index_lock(_index_guard);
         if (!_size)
@@ -83,6 +92,11 @@ public:
         int front = _front;
         ++_front %= _capacity;
         return true;
+    }
+    bool dequeue()
+    {
+        data_type temp;
+        return this->dequeue(temp);
     }
     bool dequeue(data_type& out)
     {
@@ -111,26 +125,42 @@ public:
     }
     void clear()
     {
-        while (!this->dequeue());
+        while (this->dequeue());
     }
     inline std::size_t capacity()
     {
         return _capacity;
     }
-protected:
-    /*void _deep_copy(syncronized_ringqueue<data_type>& rhs)
+    /*bool operator=(const this_type& other)
     {
-        while (_indexs_guard.test_and_set(std::memory_order_acquire));
-        while (rhs._indexs_guard.test_and_set(std::memory_order_acquire));
-
-        _indexs_guard.clear(std::memory_order_release);
-    }
-    void _deep_copy(syncronized_ringqueue<data_type>&& rhs)
-    {
-        while (_indexs_guard.test_and_set(std::memory_order_acquire));
-
-        _indexs_guard.clear(std::memory_order_release);
+    return this->copy_from(const_cast<this_type&>(other));
     }*/
+    template <class SyncronizedQueue>
+    bool operator=(typename SyncronizedQueue&& rhs)
+    {
+        typedef std::remove_reference<SyncronizedQueue>::type rhs_type;
+        this_type& lhs = *this;
+        lhs.clear();
+        if (lhs._capacity < rhs._capacity)
+        {
+            return false;
+        }
+        std::lock_guard<typename rhs_type::index_guard_type> rhs_index_guard(rhs._index_guard);
+        typedef std::conditional <
+            std::is_rvalue_reference<SyncronizedQueue>::value &&
+            std::is_move_assignable<typename rhs_type::data_type>::value,
+            std::add_rvalue_reference<typename rhs_type::data_type>::type,
+            std::add_lvalue_reference<typename rhs_type::data_type>::type > ::type request_type;
+        int rear = rhs._rear;
+        int size = rhs._size;
+        for (int i = 0; i < size; ++i)
+        {
+            std::lock_guard<typename rhs_type::item_guard_type> item_guard(rhs._item_guards[rear]);
+            lhs.enqueue(static_cast<request_type>(rhs._item_container[rear]));
+            ++rear %= rhs._capacity;
+        }
+        return true;
+    }
 private:
     // default ctor is deleted.
     syncronized_ringqueue() = delete;
@@ -148,7 +178,9 @@ protected:
 template <class DataType>
 class ringqueue: public syncronized_ringqueue < DataType, vee::empty_mutex, vee::empty_mutex >
 {
-
+public:
+    typedef syncronized_ringqueue<DataType, vee::empty_mutex, vee::empty_mutex> base_type;
+    typedef ringqueue<DataType> this_type;
 };
 
 _VEE_END
