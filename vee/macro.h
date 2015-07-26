@@ -24,5 +24,14 @@ void operator=(const TypeName&&) = delete
 #else
 #define DEBUG_PRINT(...) {}
 #endif
+#ifdef _WIN32
+#define VEE_PLATFORM_WINDOWS 1
+#define VEE_PLATFORM_X32 1
+#elif  _WIN64
+#define VEE_PLATFORM_WINDOWS_ 1
+#define VEE_PLATFORM_X64 1
+#else
+#define VEE_PLATFORM_WINDOWS 0
+#endif
 
 #endif // _VEE_MACRO_H_

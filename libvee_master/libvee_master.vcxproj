@@ -23,10 +23,12 @@
     <ClInclude Include="..\vee\tuple_unpacker.h" />
     <ClInclude Include="..\vee\type_parser.h" />
     <ClInclude Include="..\vee\vee.h" />
+    <ClInclude Include="..\vee\voost\shared_memory.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\vee\lock\lock_impl.cpp" />
+    <ClCompile Include="lock\lock_impl.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="voost\shared_memory\shared_memory_impl.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{65A082DC-494F-4576-B661-11BE002FF2E9}</ProjectGuid>
@@ -35,13 +37,13 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v120</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v120</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
@@ -61,16 +63,16 @@
     <LinkIncremental>true</LinkIncremental>
     <OutDir>$(SolutionDir)\lib\</OutDir>
     <IntDir>$(SolutionDir)\obj\$(Configuration)\</IntDir>
-    <IncludePath>$(SolutionDir);$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDir);$(BOOST);$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)\lib;$(BOOSTLIB)\x32;$(LibraryPath)</LibraryPath>
     <TargetName>$(ProjectName)-vc120-md-gd-1_0</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
     <OutDir>$(SolutionDir)\lib\</OutDir>
     <IntDir>$(SolutionDir)\obj\$(Configuration)\</IntDir>
-    <IncludePath>$(SolutionDir);$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDir);$(BOOST);$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)\lib;$(BOOSTLIB)\x32;$(LibraryPath)</LibraryPath>
     <TargetName>$(ProjectName)-vc120-md-1_0</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -85,6 +87,9 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <Lib>
+      <AdditionalDependencies>libboost_system-vc120-mt-gd-1_58.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Lib>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -102,6 +107,9 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
+    <Lib>
+      <AdditionalDependencies>libboost_system-vc120-mt-1_58.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Lib>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
