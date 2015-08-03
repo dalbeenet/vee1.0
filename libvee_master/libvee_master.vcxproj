@@ -23,11 +23,12 @@
     <ClInclude Include="..\vee\tuple_unpacker.h" />
     <ClInclude Include="..\vee\type_parser.h" />
     <ClInclude Include="..\vee\vee.h" />
+    <ClInclude Include="..\vee\voost\net.h" />
     <ClInclude Include="..\vee\voost\shared_memory.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="lock\lock_impl.cpp" />
-    <ClCompile Include="main.cpp" />
+    <ClCompile Include="voost\net\tcp_client_impl.cpp" />
     <ClCompile Include="voost\shared_memory\shared_memory_impl.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
@@ -61,19 +62,19 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <OutDir>$(SolutionDir)\lib\</OutDir>
-    <IntDir>$(SolutionDir)\obj\$(Configuration)\</IntDir>
-    <IncludePath>$(SolutionDir);$(BOOST);$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)\lib;$(BOOSTLIB)\x32;$(LibraryPath)</LibraryPath>
-    <TargetName>$(ProjectName)-vc120-md-gd-1_0</TargetName>
+    <OutDir>$(SolutionDir)\lib\x32\</OutDir>
+    <IntDir>$(SolutionDir)\obj\x32\debug\$(ProjectName)\</IntDir>
+    <IncludePath>$(SolutionDir);$(BOOST_1_58_0);$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)\lib\x32;$(BOOST_1_58_0_LIB)\x32;$(LibraryPath)</LibraryPath>
+    <TargetName>$(ProjectName)-vc120-mt-gd-1_0</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>$(SolutionDir)\lib\</OutDir>
-    <IntDir>$(SolutionDir)\obj\$(Configuration)\</IntDir>
-    <IncludePath>$(SolutionDir);$(BOOST);$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)\lib;$(BOOSTLIB)\x32;$(LibraryPath)</LibraryPath>
-    <TargetName>$(ProjectName)-vc120-md-1_0</TargetName>
+    <OutDir>$(SolutionDir)\lib\x32\</OutDir>
+    <IntDir>$(SolutionDir)\obj\x32\release\$(ProjectName)\</IntDir>
+    <IncludePath>$(SolutionDir);$(BOOST_1_58_0);$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)\lib\x32;$(BOOST_1_58_0_LIB)\x32;$(LibraryPath)</LibraryPath>
+    <TargetName>$(ProjectName)-vc120-mt-1_0</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>

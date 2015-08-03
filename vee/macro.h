@@ -10,7 +10,10 @@ Desc    : useful macros for c++ programming
 
 #define _VEE_BEGIN	namespace vee {
 #define _VEE_END	}
+#define _VOOST_BEGIN	namespace voost {
+#define _VOOST_END	}
 #define _VEE	    ::vee::
+#define _VOOST      ::vee::voost::
 #define DISALLOW_COPY_AND_ASSIGN(TypeName) \
 TypeName(const TypeName&) = delete; \
 void operator=(const TypeName&) = delete

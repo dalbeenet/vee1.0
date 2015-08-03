@@ -13,6 +13,7 @@
 #include <string>
 
 _VEE_BEGIN
+_VOOST_BEGIN
 
 class shared_memory
 {
@@ -30,6 +31,7 @@ public:
 #else
     typedef      ::boost::interprocess::shared_memory_object shared_memory_type;
 #endif
+    //TODO: copy ctor and move ctor and operator =
     // ctor (template for optional)
     template <class CreateOpt>
     shared_memory(const char* name, const int size, CreateOpt, access_mode mode):
@@ -82,6 +84,7 @@ public:
     const shared_memory_type shm;
 };
 
+_VOOST_END
 _VEE_END
 
 #endif // _VEE_COMMON_SHARED_MEMORY_H_
