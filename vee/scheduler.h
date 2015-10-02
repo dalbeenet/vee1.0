@@ -10,18 +10,20 @@ template <class FTy>
 class scheduler
 {
 public:
-    scheduler(unsigned int count, unsigned int mailbox_size):
-        actor_group(count, mailbox_size)
+    scheduler(unsigned int init_actors, unsigned int mailbox_size):
+        actor_group(init_actors, mailbox_size)
     {
         
     }
     template <class Delegate, typename ...FwdArgs>
-    inline int request(Delegate&& _delegate, FwdArgs&& ... args)
+    inline bool request(Delegate&& _delegate, FwdArgs&& ... args)
     {
-        return this->request(std::forward<Delegate>(_delegate), std::make_tuple(args ...));
+        /*static_assert(std::is_same<decltype(std::make_tuple(args ...)), argstuple_t>::value, "arguments can not convert to argstuple!");
+        argstuple_t argstuple = std::make_tuple(args ...);*/
+        return this->request_with_argstuple(std::forward<Delegate>(_delegate), std::make_tuple(args ...));
     }
     template <class Delegate, class ArgsTuple>
-    bool request(Delegate&& _delegate, ArgsTuple&& _tuple)
+    bool request_with_argstuple(Delegate&& _delegate, ArgsTuple&& _tuple)
     {
         actor<FTy>* current_actor = nullptr;
         while (true)
@@ -34,7 +36,7 @@ public:
             {
                 continue;
             }
-            if (current_actor->request(
+            if (current_actor->request_with_argstuple(
                 std::forward<Delegate>(_delegate),
                 std::forward<ArgsTuple>(_tuple)) >= 0)
             {

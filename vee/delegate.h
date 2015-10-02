@@ -131,8 +131,7 @@ public:
             it.second.operator()(args...);
         }
     }
-    template <class ArgsTuple>
-    void operator()(ArgsTuple&& args)
+    void operator()(argstuple_t& args)
     {
         for (auto& it : _container)
         {
@@ -141,6 +140,17 @@ public:
         for (auto& it : _idx_container)
         {
             call_by_tuple(it.second, args);
+        }
+    }
+    void operator()(argstuple_t&& args)
+    {
+        for (auto& it : _container)
+        {
+            call_by_tuple(it, static_cast<argstuple_t&&>(args));
+        }
+        for (auto& it : _idx_container)
+        {
+            call_by_tuple(it.second, static_cast<argstuple_t&&>(args));
         }
     }
     template <class CallableObj>
@@ -219,6 +229,14 @@ private:
     _container_t _container;
     _indexing_container_t _idx_container;
 };
+
+template <class FTy>
+delegate<FTy> make_delegate(std::function<FTy> f)
+{
+    delegate<FTy> e;
+    e += f;
+    return e;
+}
 
 _VEE_END
 
